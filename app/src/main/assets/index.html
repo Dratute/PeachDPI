@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#120D12">
+<title>PeachDPI</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  color-scheme:dark;
+  --bg:#120d12; --surface:#1b141b; --surface-2:#251c25; --line:#2f242f;
+  --text:#f5ebe8; --muted:#a2939a; --peach:#ffb08a; --coral:#ff6f61; --ok:#ffcfa8;
+  --r-lg:28px; --r-md:18px; --r-sm:12px;
+  --ease:cubic-bezier(.22,1,.36,1);
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%}
+*,*::before,*::after{box-sizing:inherit;-webkit-tap-highlight-color:transparent}
+body{margin:0;min-height:100%;background:var(--bg);color:var(--text);
+  font-family:'Onest',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  -webkit-font-smoothing:antialiased;display:flex;justify-content:center}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:10}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+button:focus-visible,[role=switch]:focus-visible{outline:2px solid var(--peach);outline-offset:3px}
+.app{width:100%;max-width:480px;min-height:100vh;display:flex;flex-direction:column;padding:0 20px 28px;position:relative;overflow:hidden}
+.glow{position:absolute;left:50%;top:150px;width:520px;height:520px;margin-left:-260px;border-radius:50%;
+  background:radial-gradient(closest-side,rgba(255,111,97,.28),transparent);opacity:0;transition:opacity .8s var(--ease);pointer-events:none}
+.app[data-state=connected] .glow,.app[data-state=connecting] .glow{opacity:1}
+
+/* app bar */
+.bar{display:flex;align-items:center;justify-content:center;height:64px;position:relative;z-index:1}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:20px;letter-spacing:-.01em}
+.brand .logo{font-size:26px;line-height:1}
+.icon-btn{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;color:var(--muted);transition:background .2s,color .2s,transform .2s var(--ease)}
+.icon-btn:active{background:var(--surface-2);color:var(--text);transform:scale(.92)}
+.icon-btn svg{width:24px;height:24px}
+
+/* hero */
+.hero{flex:1;justify-content:center;display:flex;flex-direction:column;align-items:center;padding:0 0 20px;position:relative;z-index:1}
+.chip{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:999px;background:var(--surface);border:1px solid var(--line);font-size:14px;font-weight:600;transition:all .4s var(--ease)}
+.dot{width:8px;height:8px;border-radius:50%;background:#6c5d65;transition:background .4s,box-shadow .4s}
+.app[data-state=connecting] .dot{background:var(--peach);animation:blink 1s infinite}
+.app[data-state=connected] .dot{background:var(--peach);box-shadow:0 0 10px var(--coral)}
+.app[data-state=connected] .chip{border-color:rgba(255,176,138,.4);color:var(--ok)}
+@keyframes blink{50%{opacity:.3}}
+
+.stage{position:relative;width:260px;height:260px;margin:34px 0 26px;display:grid;place-items:center}
+.ring{position:absolute;inset:0;border-radius:50%;border:1px solid var(--line);transition:border-color .6s,transform .6s var(--ease)}
+.ring.r2{inset:-22px;opacity:.5}
+.app[data-state=connected] .ring{border-color:rgba(255,176,138,.45);animation:pulse 3s var(--ease) infinite}
+.app[data-state=connected] .ring.r2{animation-delay:.6s}
+@keyframes pulse{0%{transform:scale(.96);opacity:.9}100%{transform:scale(1.12);opacity:0}}
+.spin{position:absolute;inset:0;border-radius:50%;border:3px solid transparent;border-top-color:var(--peach);opacity:0;transition:opacity .3s}
+.app[data-state=connecting] .spin{opacity:1;animation:rot .9s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
+.power{position:relative;width:188px;height:188px;border-radius:50%;display:grid;place-items:center;
+  background:linear-gradient(160deg,#2a202a,#191219);border:1px solid var(--line);
+  box-shadow:0 18px 40px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.05);
+  transition:transform .25s var(--ease),background .5s,box-shadow .5s,color .4s;color:var(--muted)}
+.power svg{width:72px;height:72px}
+.power:active{transform:scale(.94)}
+.app[data-state=connected] .power{background:linear-gradient(160deg,var(--peach),var(--coral));color:#2a1114;
+  box-shadow:0 18px 50px rgba(255,111,97,.4),inset 0 1px 0 rgba(255,255,255,.35)}
+.app[data-state=connecting] .power{color:var(--peach)}
+.hint{margin:0;color:var(--muted);font-size:15px;text-align:center;min-height:22px}
+.timer{font-variant-numeric:tabular-nums;font-size:34px;font-weight:600;letter-spacing:.02em;margin:0 0 6px;height:42px;opacity:0;transition:opacity .4s}
+.app[data-state=connected] .timer{opacity:1}
+
+.notice{margin:6px 0 22px;padding:12px 14px;border-radius:var(--r-md);background:rgba(255,176,138,.07);border:1px solid rgba(255,176,138,.18);color:var(--ok);font-size:13px;line-height:1.45;display:flex;gap:10px;position:relative;z-index:1}
+.notice svg{flex:none;width:18px;height:18px;margin-top:1px}
+
+/* cards */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:6px 18px;position:relative;z-index:1}
+.card-head{display:flex;align-items:center;justify-content:space-between;padding:14px 0 6px}
+.card-head h2{margin:0;font-size:17px;font-weight:600}
+.link-btn{color:var(--peach);font-size:14px;font-weight:600;padding:8px 4px}
+.link-btn[disabled]{opacity:.5;pointer-events:none}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0;border-top:1px solid var(--line);font-size:15px}
+.row:first-of-type{border-top:0}
+.row .k{color:var(--muted)}
+.row .v{font-weight:500;text-align:right;display:flex;align-items:center;gap:8px}
+.row .v.dim{color:#6f6168}
+.row .v.warn{color:var(--peach)}
+.row.checking .v::before{content:"";width:12px;height:12px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--peach);animation:rot .7s linear infinite}
+.foot{margin:24px 0 0;text-align:center;color:#6f6168;font-size:12px}
+
+/* sheet */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.6);opacity:0;pointer-events:none;transition:opacity .3s;z-index:20}
+.scrim.open{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:50%;bottom:0;width:100%;max-width:480px;max-height:88vh;overflow:auto;background:var(--surface);border-radius:28px 28px 0 0;border:1px solid var(--line);border-bottom:0;
+  padding:10px 20px calc(24px + env(safe-area-inset-bottom,0px));transform:translate(-50%,105%);transition:transform .45s var(--ease);z-index:21;visibility:hidden}
+.sheet.open{transform:translate(-50%,0);visibility:visible}
+.grab{width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 12px}
+.sheet h2{margin:6px 0 8px;font-size:20px}
+.set{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:15px 0;border-top:1px solid var(--line)}
+.set .t{font-size:15px;font-weight:500}.set .d{font-size:13px;color:var(--muted);margin-top:3px;line-height:1.35}
+.sw{flex:none;width:50px;height:30px;border-radius:15px;background:var(--surface-2);border:1px solid var(--line);position:relative;transition:background .25s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:var(--muted);transition:transform .3s var(--ease),background .25s}
+.sw[aria-checked=true]{background:rgba(255,111,97,.35);border-color:rgba(255,176,138,.5)}
+.sw[aria-checked=true]::after{transform:translateX(20px);background:var(--peach)}
+.seg{display:flex;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:3px;gap:2px}
+.seg button{padding:8px 12px;border-radius:9px;font-size:13px;color:var(--muted);transition:all .2s}
+.seg button[aria-pressed=true]{background:var(--surface-2);color:var(--text)}
+.done{width:100%;margin-top:14px;padding:15px;border-radius:var(--r-md);background:var(--surface-2);font-weight:600}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);background:var(--surface-2);border:1px solid var(--line);padding:12px 18px;border-radius:14px;font-size:14px;opacity:0;pointer-events:none;transition:all .35s var(--ease);z-index:30;max-width:90%}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<main class="app" id="app" data-state="disconnected">
+  <div class="glow"></div>
+  <header class="bar">
+    <div class="brand"><span class="logo" aria-hidden="true">🍑</span><span>PeachDPI</span></div>
+  </header>
+
+  <section class="hero" aria-live="polite">
+    <div class="chip"><span class="dot"></span><span id="statusText">Отключено</span></div>
+    <div class="stage">
+      <span class="ring r2"></span><span class="ring"></span><span class="spin"></span>
+      <button class="power" id="power" aria-label="Подключить">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.3 6.8a8 8 0 1 0 11.4 0"/></svg>
+      </button>
+    </div>
+    <p class="timer" id="timer">00:00:00</p>
+    <p class="hint" id="hint">Нажмите, чтобы подключиться</p>
+  </section>
+
+</main>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+/* ---------- Модуль: строки интерфейса (русский) ---------- */
+const T = {
+  state:{disconnected:'Отключено',connecting:'Подключение…',connected:'Подключено',error:'Ошибка'},
+  hint:{disconnected:'Нажмите, чтобы подключиться',connecting:'Устанавливаем соединение…',connected:'Демо: трафик не изменяется'},
+  aria:{disconnected:'Подключить',connecting:'Отменить подключение',connected:'Отключить'},
+};
+
+/* ---------- Модуль: мост к нативному слою ----------
+   Заменить MockBridge на реализацию, вызывающую Android (например,
+   через WebView @JavascriptInterface или Capacitor-плагин) с тем же API. */
+const MockBridge = {
+  async connect(){ await wait(1400); return {ok:true,demo:true}; },
+  async disconnect(){ await wait(500); return {ok:true}; }
+};
+const Bridge = window.PeachNative || MockBridge;
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+/* ---------- Модуль: состояние подключения ---------- */
+const Connection = {
+  state:'disconnected', since:0, listeners:[], token:0,
+  on(fn){ this.listeners.push(fn); },
+  emit(){ this.listeners.forEach(f=>f(this.state)); },
+  async toggle(){
+    if(this.state==='connecting'){ this.token++; this.state='disconnected'; return this.emit(); }
+    if(this.state==='connected'){ await Bridge.disconnect(); this.state='disconnected'; return this.emit(); }
+    const t=++this.token; this.state='connecting'; this.emit();
+    const res=await Bridge.connect();
+    if(t!==this.token) return;
+    if(res.ok){ this.state='connected'; this.since=Date.now(); } else this.state='disconnected';
+    this.emit();
+  }
+};
+
+/* ---------- Модуль: интерфейс ---------- */
+const $ = id => document.getElementById(id);
+const UI = {
+  init(){
+    Connection.on(s=>this.render(s));
+    $('power').onclick=()=>{ navigator.vibrate&&navigator.vibrate(18); Connection.toggle(); };
+    setInterval(()=>this.tick(),1000);
+  },
+  render(s){
+    $('app').dataset.state=s;
+    $('statusText').textContent=T.state[s];
+    $('hint').textContent=T.hint[s];
+    $('power').setAttribute('aria-label',T.aria[s]);
+    if(s==='connected') this.toast('Демо-режим: реальное соединение не создано'); this.tick();
+  },
+  tick(){
+    if(Connection.state!=='connected') return;
+    const n=Math.floor((Date.now()-Connection.since)/1000), p=x=>String(x).padStart(2,'0');
+    $('timer').textContent=`${p(Math.floor(n/3600))}:${p(Math.floor(n/60)%60)}:${p(n%60)}`;
+  },
+  toast(msg){
+    const t=$('toast'); t.textContent=msg; t.classList.add('show');
+    clearTimeout(this._t); this._t=setTimeout(()=>t.classList.remove('show'),2600);
+  }
+};
+UI.init();
+</script>
+</body>
+</html>
