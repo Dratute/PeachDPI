@@ -14,9 +14,6 @@ import android.os.ParcelFileDescriptor
 import android.util.Log
 import hev.htproxy.TProxyService
 import java.io.File
-import java.net.InetSocketAddress
-import java.net.Socket
-import java.util.concurrent.TimeUnit
 
 object VpnState {
     @Volatile var state: String = "disconnected"
@@ -40,9 +37,6 @@ class PeachVpnService : VpnService() {
         private const val NOTIF_ID = 1
         private const val PROXY_PORT = 1080
         private const val MTU = 8500
-
-        // Стартовые параметры ядра ByeDPI. Позже вынесем в настройки.
-        private val PROFILE = listOf("--disorder", "1", "--auto=torst", "--tlsrec", "1+s")
     }
 
     private val lock = Any()
@@ -89,7 +83,7 @@ class PeachVpnService : VpnService() {
             if (tun != null) return
             VpnState.set("connecting")
             try {
-                startProxy()
+                proxy = Core.start(this, PROXY_PORT, Profiles.current(this))
                 startTunnel()
                 VpnState.set("connected")
             } catch (t: Throwable) {
@@ -106,39 +100,6 @@ class PeachVpnService : VpnService() {
 
     private fun stopAll() {
         synchronized(lock) { stopInternal() }
-    }
-
-    private fun startProxy() {
-        val exe = File(applicationInfo.nativeLibraryDir, "libciadpi.so")
-        if (!exe.exists()) throw IllegalStateException("Ядро обхода не найдено в приложении")
-        val cmd = mutableListOf(exe.absolutePath, "-i", "127.0.0.1", "-p", PROXY_PORT.toString())
-        cmd.addAll(PROFILE)
-        val p = ProcessBuilder(cmd).redirectErrorStream(true).start()
-        proxy = p
-        Thread {
-            try {
-                p.inputStream.bufferedReader().forEachLine { Log.d(TAG, "ciadpi: $it") }
-            } catch (_: Exception) {
-            }
-        }.start()
-        waitPort(PROXY_PORT, 4000)
-    }
-
-    private fun waitPort(port: Int, timeoutMs: Long) {
-        val end = System.currentTimeMillis() + timeoutMs
-        while (System.currentTimeMillis() < end) {
-            val p = proxy
-            if (p == null || !p.isAlive) {
-                throw IllegalStateException("Ядро обхода сразу завершилось (код ${p?.exitValue()})")
-            }
-            try {
-                Socket().use { it.connect(InetSocketAddress("127.0.0.1", port), 200) }
-                return
-            } catch (_: Exception) {
-                Thread.sleep(150)
-            }
-        }
-        throw IllegalStateException("Ядро обхода не открыло порт")
     }
 
     private fun startTunnel() {
@@ -196,13 +157,7 @@ class PeachVpnService : VpnService() {
         } catch (_: Exception) {
         }
         tun = null
-        proxy?.let { p ->
-            p.destroy()
-            try {
-                if (!p.waitFor(2, TimeUnit.SECONDS)) p.destroyForcibly()
-            } catch (_: Exception) {
-            }
-        }
+        Core.stop(proxy)
         proxy = null
     }
 
