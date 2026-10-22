@@ -36,6 +36,18 @@ class MainActivity : Activity() {
         fun stop() {
             runOnUiThread { stopVpn() }
         }
+
+        @JavascriptInterface
+        fun test() {
+            ConnectionTest.run { json ->
+                runOnUiThread {
+                    web.evaluateJavascript(
+                        "window.onPeachTest && window.onPeachTest(" + JSONObject.quote(json) + ")",
+                        null
+                    )
+                }
+            }
+        }
     }
 
     @SuppressLint("SetJavaScriptEnabled")
