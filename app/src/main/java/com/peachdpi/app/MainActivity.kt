@@ -38,11 +38,11 @@ class MainActivity : Activity() {
         }
 
         @JavascriptInterface
-        fun test() {
-            ConnectionTest.run { json ->
+        fun tune() {
+            Autotune.run(applicationContext) { json ->
                 runOnUiThread {
                     web.evaluateJavascript(
-                        "window.onPeachTest && window.onPeachTest(" + JSONObject.quote(json) + ")",
+                        "window.onPeachTune && window.onPeachTune(" + JSONObject.quote(json) + ")",
                         null
                     )
                 }
