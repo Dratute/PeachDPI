@@ -2,6 +2,11 @@ name: Build APK
 on:
   push:
   workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: build
+  cancel-in-progress: true
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -55,7 +60,14 @@ jobs:
 
       - run: gradle assembleDebug --stacktrace
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: PeachDPI-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+      - name: Publish APK to Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk PeachDPI.apk
+          gh release delete latest --yes --cleanup-tag || true
+          gh release create latest PeachDPI.apk \
+            --target "$GITHUB_SHA" \
+            --title "PeachDPI (последняя сборка)" \
+            --notes "Автоматическая сборка. Коммит: $GITHUB_SHA" \
+            --latest
